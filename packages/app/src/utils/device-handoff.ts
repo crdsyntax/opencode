@@ -132,6 +132,17 @@ export function pairDevice(
   })
 }
 
+export function sendHandoff(
+  server: ServerConnection.HttpBase,
+  platformFetch: typeof fetch | undefined,
+  input: { sessionID: string; deviceID: string; note?: string },
+) {
+  return request<SessionHandoff>(server, platformFetch, "/api/handoff", {
+    method: "POST",
+    body: JSON.stringify(input),
+  })
+}
+
 export function listPendingHandoffs(server: ServerConnection.HttpBase, platformFetch: typeof fetch | undefined, token: string) {
   return request<readonly SessionHandoff[]>(server, platformFetch, "/api/handoff/pending", undefined, token)
 }

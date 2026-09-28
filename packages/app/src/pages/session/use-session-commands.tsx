@@ -445,6 +445,22 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
     ]
   }
 
+  const handoffCmds = () => [
+    sessionCommand({
+      id: "session.handoff",
+      title: language.t("handoff.action.send"),
+      disabled: !params.id,
+      onSelect: () => {
+        const sessionID = params.id
+        if (!sessionID) return
+        void openDialog(
+          () => import("@/components/dialog-send-session"),
+          (x) => dialog.show(() => <x.DialogSendSession sessionID={sessionID} />),
+        )
+      },
+    }),
+  ]
+
   const sessionCmds = () => [
     sessionCommand({
       id: "session.new",
@@ -646,6 +662,7 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
   command.register("session", () => [
     ...sessionCmds(),
     ...shareCmds(),
+    ...handoffCmds(),
     ...fileCmds(),
     ...contextCmds(),
     ...viewCmds(),
