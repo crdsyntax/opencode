@@ -681,6 +681,72 @@ const adaptGroup17 = (raw: RawClient["server.projectCopy"]) => ({
   refresh: Endpoint17_2(raw),
 })
 
+const Endpoint18_0 = (raw: RawClient["server.device"]) => () =>
+  raw["device.list"]({}).pipe(Effect.mapError(mapClientError))
+
+const Endpoint18_1 = (raw: RawClient["server.device"]) => () =>
+  raw["device.offer"]({}).pipe(Effect.mapError(mapClientError))
+
+type Endpoint18_2Request = Parameters<RawClient["server.device"]["device.pair"]>[0]
+type Endpoint18_2Input = {
+  readonly code: Endpoint18_2Request["payload"]["code"]
+  readonly name: Endpoint18_2Request["payload"]["name"]
+  readonly kind: Endpoint18_2Request["payload"]["kind"]
+  readonly platform?: Endpoint18_2Request["payload"]["platform"]
+}
+const Endpoint18_2 = (raw: RawClient["server.device"]) => (input: Endpoint18_2Input) =>
+  raw["device.pair"]({
+    payload: { code: input["code"], name: input["name"], kind: input["kind"], platform: input["platform"] },
+  }).pipe(Effect.mapError(mapClientError))
+
+type Endpoint18_3Request = Parameters<RawClient["server.device"]["device.remove"]>[0]
+type Endpoint18_3Input = { readonly deviceID: Endpoint18_3Request["params"]["deviceID"] }
+const Endpoint18_3 = (raw: RawClient["server.device"]) => (input: Endpoint18_3Input) =>
+  raw["device.remove"]({ params: { deviceID: input["deviceID"] } }).pipe(Effect.mapError(mapClientError))
+
+const adaptGroup18 = (raw: RawClient["server.device"]) => ({
+  list: Endpoint18_0(raw),
+  offer: Endpoint18_1(raw),
+  pair: Endpoint18_2(raw),
+  remove: Endpoint18_3(raw),
+})
+
+type Endpoint19_0Request = Parameters<RawClient["server.handoff"]["handoff.send"]>[0]
+type Endpoint19_0Input = {
+  readonly sessionID: Endpoint19_0Request["payload"]["sessionID"]
+  readonly deviceID: Endpoint19_0Request["payload"]["deviceID"]
+  readonly note?: Endpoint19_0Request["payload"]["note"]
+}
+const Endpoint19_0 = (raw: RawClient["server.handoff"]) => (input: Endpoint19_0Input) =>
+  raw["handoff.send"]({
+    payload: { sessionID: input["sessionID"], deviceID: input["deviceID"], note: input["note"] },
+  }).pipe(Effect.mapError(mapClientError))
+
+const Endpoint19_1 = (raw: RawClient["server.handoff"]) => () =>
+  raw["handoff.pending"]({}).pipe(Effect.mapError(mapClientError))
+
+type Endpoint19_2Request = Parameters<RawClient["server.handoff"]["handoff.respond"]>[0]
+type Endpoint19_2Input = {
+  readonly handoffID: Endpoint19_2Request["params"]["handoffID"]
+  readonly status: Endpoint19_2Request["payload"]["status"]
+}
+const Endpoint19_2 = (raw: RawClient["server.handoff"]) => (input: Endpoint19_2Input) =>
+  raw["handoff.respond"]({ params: { handoffID: input["handoffID"] }, payload: { status: input["status"] } }).pipe(
+    Effect.mapError(mapClientError),
+  )
+
+type Endpoint19_3Request = Parameters<RawClient["server.handoff"]["handoff.dismiss"]>[0]
+type Endpoint19_3Input = { readonly handoffID: Endpoint19_3Request["params"]["handoffID"] }
+const Endpoint19_3 = (raw: RawClient["server.handoff"]) => (input: Endpoint19_3Input) =>
+  raw["handoff.dismiss"]({ params: { handoffID: input["handoffID"] } }).pipe(Effect.mapError(mapClientError))
+
+const adaptGroup19 = (raw: RawClient["server.handoff"]) => ({
+  send: Endpoint19_0(raw),
+  pending: Endpoint19_1(raw),
+  respond: Endpoint19_2(raw),
+  dismiss: Endpoint19_3(raw),
+})
+
 const adaptClient = (raw: RawClient) => ({
   health: adaptGroup0(raw["server.health"]),
   location: adaptGroup1(raw["server.location"]),
@@ -700,6 +766,8 @@ const adaptClient = (raw: RawClient) => ({
   questions: adaptGroup15(raw["server.question"]),
   references: adaptGroup16(raw["server.reference"]),
   projectCopies: adaptGroup17(raw["server.projectCopy"]),
+  "server.device": adaptGroup18(raw["server.device"]),
+  "server.handoff": adaptGroup19(raw["server.handoff"]),
 })
 
 export const make = (options?: { readonly baseUrl?: URL | string }) =>

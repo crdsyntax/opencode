@@ -370,13 +370,19 @@ const main = Effect.gen(function* () {
 
       return yield* Deferred.await(res)
     })
-    const hostname = "127.0.0.1"
-    const url = `http://${hostname}:${port}`
+    // The sidecar has to be reachable from a phone to be pairable, and a phone cannot dial
+    // 127.0.0.1. Binding every interface is safe because the server is always authenticated with
+    // the per-launch random password below, and it matches what the WSL sidecar already does
+    // (`wsl/sidecar.ts` passes `--hostname 0.0.0.0`). Set OPENCODE_HOST=127.0.0.1 to opt out.
+    const bindHost = process.env.OPENCODE_HOST || "0.0.0.0"
+    // The desktop keeps talking to its own server over loopback regardless of the bind address,
+    // so exposing the listener does not change how the desktop itself connects.
+    const url = `http://127.0.0.1:${port}`
     const password = randomUUID()
 
-    logger.log("spawning sidecar", { url })
+    logger.log("spawning sidecar", { url, bindHost })
     const { listener, health } = yield* Effect.promise(() =>
-      spawnLocalServer(hostname, port, password, {
+      spawnLocalServer(bindHost, port, password, {
         userDataPath: app.getPath("userData"),
         onStdout: (message) => writeLog("server", "stdout", { message }),
         onStderr: (message) => writeLog("server", "stderr", { message }, "warn"),

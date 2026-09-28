@@ -70,6 +70,18 @@ export default {
         );
       `)
       yield* tx.run(`
+        CREATE TABLE \`device\` (
+          \`id\` text PRIMARY KEY,
+          \`name\` text NOT NULL,
+          \`kind\` text NOT NULL,
+          \`platform\` text,
+          \`token_hash\` text NOT NULL UNIQUE,
+          \`time_last_seen\` integer NOT NULL,
+          \`time_created\` integer NOT NULL,
+          \`time_updated\` integer NOT NULL
+        );
+      `)
+      yield* tx.run(`
         CREATE TABLE \`event_sequence\` (
           \`aggregate_id\` text PRIMARY KEY,
           \`seq\` integer NOT NULL,
@@ -84,6 +96,18 @@ export default {
           \`type\` text NOT NULL,
           \`data\` text NOT NULL,
           CONSTRAINT \`fk_event_aggregate_id_event_sequence_aggregate_id_fk\` FOREIGN KEY (\`aggregate_id\`) REFERENCES \`event_sequence\`(\`aggregate_id\`) ON DELETE CASCADE
+        );
+      `)
+      yield* tx.run(`
+        CREATE TABLE \`handoff\` (
+          \`id\` text PRIMARY KEY,
+          \`session_id\` text NOT NULL,
+          \`device_id\` text NOT NULL,
+          \`status\` text NOT NULL,
+          \`note\` text,
+          \`time_created\` integer NOT NULL,
+          \`time_updated\` integer NOT NULL,
+          CONSTRAINT \`fk_handoff_device_id_device_id_fk\` FOREIGN KEY (\`device_id\`) REFERENCES \`device\`(\`id\`) ON DELETE CASCADE
         );
       `)
       yield* tx.run(`

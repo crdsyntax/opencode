@@ -21,6 +21,8 @@ import { LocationGroup } from "./groups/location"
 import { IntegrationGroup } from "./groups/integration"
 import { CredentialGroup } from "./groups/credential"
 import { ProjectCopyGroup } from "./groups/project-copy"
+import { DeviceGroup } from "./groups/device"
+import { HandoffGroup } from "./groups/handoff"
 
 // Protocol owns middleware placement, while Server injects concrete keys so Core service identities stay downstream.
 const makeApiFromGroup = <
@@ -53,6 +55,9 @@ const makeApiFromGroup = <
     .add(makeQuestionGroup(locationMiddleware, sessionLocationMiddleware))
     .add(ReferenceGroup.middleware(locationMiddleware))
     .add(ProjectCopyGroup.middleware(locationMiddleware))
+    // Devices and handoffs are server-scoped, not workspace-scoped, so they carry no location middleware.
+    .add(DeviceGroup)
+    .add(HandoffGroup)
     .annotateMerge(
       OpenApi.annotations({
         title: "opencode HttpApi",

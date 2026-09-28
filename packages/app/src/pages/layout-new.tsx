@@ -4,10 +4,14 @@ import { DebugBar } from "@/components/debug-bar"
 import { TabsInfoPopup } from "@/components/help-button"
 import { Titlebar, type TitlebarUpdate } from "@/components/titlebar"
 import { usePlatform } from "@/context/platform"
+import { useHandoffCommand } from "@/components/dialog-handoffs"
+import { usePairDeviceCommand } from "@/components/dialog-pair-device"
 import { setV2Toast, ToastRegion } from "@/utils/toast"
 
 export default function NewLayout(props: ParentProps) {
   const platform = usePlatform()
+  useHandoffCommand()
+  usePairDeviceCommand()
   const [state, setState] = createStore({ debugTools: true })
 
   createEffect(() => setV2Toast(true))

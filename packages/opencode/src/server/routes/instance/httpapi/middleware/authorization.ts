@@ -1,5 +1,6 @@
 import { ServerAuth } from "@/server/auth"
-import { Effect, Encoding, Layer, Redacted } from "effect"
+import { Device } from "@opencode-ai/core/device"
+import { Effect, Encoding, Layer, Option, Redacted } from "effect"
 import { HttpEffect, HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { HttpApiError, HttpApiMiddleware } from "effect/unstable/httpapi"
 import { hasPtyConnectTicketURL } from "@/server/shared/pty-ticket"
@@ -41,16 +42,22 @@ function validateCredential<A, E, R>(
   effect: Effect.Effect<A, E, R>,
   credential: ServerAuth.DecodedCredentials,
   config: ServerAuth.Info,
+  deviceToken?: string,
 ) {
   return Effect.gen(function* () {
     if (!ServerAuth.required(config)) return yield* effect
-    if (!ServerAuth.authorized(credential, config)) {
-      yield* HttpEffect.appendPreResponseHandler((_request, response) =>
-        Effect.succeed(HttpServerResponse.setHeader(response, "www-authenticate", WWW_AUTHENTICATE)),
-      )
-      return yield* new HttpApiError.Unauthorized({})
+    if (ServerAuth.authorized(credential, config)) return yield* effect
+    // Paired devices authenticate with their own long-lived token instead of the shared password.
+    // Without this the legacy routes would be unreachable from a phone, which paired precisely so
+    // the password never has to leave the host machine.
+    if (deviceToken) {
+      const devices = yield* Effect.serviceOption(Device.Service)
+      if (Option.isSome(devices) && (yield* devices.value.authenticate(deviceToken))) return yield* effect
     }
-    return yield* effect
+    yield* HttpEffect.appendPreResponseHandler((_request, response) =>
+      Effect.succeed(HttpServerResponse.setHeader(response, "www-authenticate", WWW_AUTHENTICATE)),
+    )
+    return yield* new HttpApiError.Unauthorized({})
   })
 }
 
@@ -82,20 +89,33 @@ function credentialFromURL(url: URL, request: HttpServerRequest.HttpServerReques
   return Effect.succeed(emptyCredential())
 }
 
+/** Extracts a paired device token, which the legacy routes accept alongside Basic auth. */
+function deviceTokenFromRequest(request: HttpServerRequest.HttpServerRequest) {
+  const match = /^Bearer\s+(.+)$/i.exec(request.headers.authorization ?? "")
+  return match ? match[1] : undefined
+}
+
 function validateRawCredential<A, E, R>(
   effect: Effect.Effect<A, E, R>,
   credential: ServerAuth.DecodedCredentials,
   config: ServerAuth.Info,
+  deviceToken?: string,
 ) {
   if (!ServerAuth.required(config)) return effect
-  if (!ServerAuth.authorized(credential, config))
-    return Effect.succeed(
-      HttpServerResponse.empty({
-        status: UNAUTHORIZED,
-        headers: { "www-authenticate": WWW_AUTHENTICATE },
-      }),
-    )
-  return effect
+  if (ServerAuth.authorized(credential, config)) return effect
+  const unauthorized = Effect.succeed(
+    HttpServerResponse.empty({
+      status: UNAUTHORIZED,
+      headers: { "www-authenticate": WWW_AUTHENTICATE },
+    }),
+  )
+  // Same device-token allowance as validateCredential, for the raw router path.
+  return Effect.gen(function* () {
+    const devices = yield* Effect.serviceOption(Device.Service)
+    if (deviceToken && Option.isSome(devices) && (yield* devices.value.authenticate(deviceToken)))
+      return yield* effect
+    return yield* unauthorized
+  })
 }
 
 export const authorizationRouterMiddleware = HttpRouter.middleware()(
@@ -109,7 +129,9 @@ export const authorizationRouterMiddleware = HttpRouter.middleware()(
         const url = new URL(request.url, "http://localhost")
         if (isPublicUIPath(request.method, url.pathname)) return yield* effect
         return yield* credentialFromURL(url, request).pipe(
-          Effect.flatMap((credential) => validateRawCredential(effect, credential, config)),
+          Effect.flatMap((credential) =>
+            validateRawCredential(effect, credential, config, deviceTokenFromRequest(request)),
+          ),
         )
       })
   }),
@@ -124,7 +146,9 @@ export const authorizationLayer = Layer.effect(
       Effect.gen(function* () {
         const request = yield* HttpServerRequest.HttpServerRequest
         return yield* credentialFromRequest(request).pipe(
-          Effect.flatMap((credential) => validateCredential(effect, credential, config)),
+          Effect.flatMap((credential) =>
+            validateCredential(effect, credential, config, deviceTokenFromRequest(request)),
+          ),
         )
       }),
     )

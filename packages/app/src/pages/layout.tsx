@@ -52,6 +52,8 @@ import { listAllSessions } from "@/utils/session"
 import { useDialog } from "@opencode-ai/ui/context/dialog"
 import { useTheme, type ColorScheme } from "@opencode-ai/ui/theme/context"
 import { useCommand, type CommandOption } from "@/context/command"
+import { useHandoffCommand } from "@/components/dialog-handoffs"
+import { usePairDeviceCommand } from "@/components/dialog-pair-device"
 import { ConstrainDragXAxis, getDraggableId } from "@/utils/solid-dnd"
 import { DebugBar } from "@/components/debug-bar"
 import { TabsInfoPopup } from "@/components/help-button"
@@ -119,6 +121,8 @@ export default function LegacyLayout(props: ParentProps) {
   const providers = useProviders(() => undefined)
   const dialog = useDialog()
   const command = useCommand()
+  useHandoffCommand()
+  usePairDeviceCommand()
   const theme = useTheme()
   const language = useLanguage()
   createEffect(() => setV2Toast(false))

@@ -13,6 +13,7 @@ import { useGlobal } from "./global"
 import { ServerScope } from "@/utils/server-scope"
 import { detectServerProtocol, type ServerProtocol } from "@/utils/server-protocol"
 import { createCompatibleApi, type CompatibleApi } from "@/utils/server-compat"
+import { pathKey } from "@/utils/path-key"
 
 const isAbortError = (error: unknown) =>
   error !== null && typeof error === "object" && "name" in error && error.name === "AbortError"
@@ -238,7 +239,10 @@ function createServerSdkContextBase(server: ServerConnection.Any, scope: ServerS
     last = Date.now()
     const output = coalesceServerEvents(events)
     batch(() => {
-      output.forEach((event) => emitter.emit(event.directory, event.payload))
+      // The server reports directories as the host spells them, so a Windows event arrives as `D:\`
+      // while every context subscribes under the canonical `D:/`. The emitter matches keys exactly,
+      // so both sides have to be canonicalised or no event ever reaches a directory context.
+      output.forEach((event) => emitter.emit(pathKey(event.directory), event.payload))
     })
 
     buffer.length = 0
@@ -323,8 +327,16 @@ function createServerSdkContextBase(server: ServerConnection.Any, scope: ServerS
   }
 
   onMount(() => {
-    makeEventListener(window, "pagehide", stop)
+    // In the desktop shell a pagehide is not a teardown, and treating it as one left the stream
+    // permanently dead: it was stopped here, but the pageshow path only restores bfcache
+    // navigations, so nothing ever brought it back and no error was logged. Abort the in-flight
+    // attempt instead and let the reconnect loop recover it.
+    makeEventListener(window, "pagehide", () => attempt?.abort())
     makeEventListener(window, "pageshow", (event) => resumeStreamAfterPageShow(event, start))
+    makeEventListener(window, "focus", start)
+    makeEventListener(document, "visibilitychange", () => {
+      if (document.visibilityState === "visible") start()
+    })
   })
 
   onCleanup(() => {
@@ -417,7 +429,7 @@ function createDirSdkContext(directory: string, serverSDK: ServerSDKBase) {
 
   const emitter = createGlobalEmitter<SDKEventMap>()
 
-  const unsub = serverSDK.event.on(directory, (event) => {
+  const unsub = serverSDK.event.on(pathKey(directory), (event) => {
     emitter.emit(event.type, event)
   })
   onCleanup(unsub)

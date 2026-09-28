@@ -112,6 +112,19 @@ import type {
   ProjectCopiesRemoveOutput,
   ProjectCopiesRefreshInput,
   ProjectCopiesRefreshOutput,
+  ServerDeviceListOutput,
+  ServerDeviceOfferOutput,
+  ServerDevicePairInput,
+  ServerDevicePairOutput,
+  ServerDeviceRemoveInput,
+  ServerDeviceRemoveOutput,
+  ServerHandoffSendInput,
+  ServerHandoffSendOutput,
+  ServerHandoffPendingOutput,
+  ServerHandoffRespondInput,
+  ServerHandoffRespondOutput,
+  ServerHandoffDismissInput,
+  ServerHandoffDismissOutput,
 } from "./types"
 import { ClientError } from "./client-error"
 
@@ -982,6 +995,89 @@ export function make(options: ClientOptions) {
             query: { location: input["location"] },
             successStatus: 204,
             declaredStatuses: [400, 401],
+            empty: true,
+          },
+          requestOptions,
+        ),
+    },
+    "server.device": {
+      list: (requestOptions?: RequestOptions) =>
+        request<ServerDeviceListOutput>(
+          { method: "GET", path: `/api/device`, successStatus: 200, declaredStatuses: [400, 401], empty: false },
+          requestOptions,
+        ),
+      offer: (requestOptions?: RequestOptions) =>
+        request<ServerDeviceOfferOutput>(
+          { method: "POST", path: `/api/device/offer`, successStatus: 200, declaredStatuses: [400, 401], empty: false },
+          requestOptions,
+        ),
+      pair: (input: ServerDevicePairInput, requestOptions?: RequestOptions) =>
+        request<ServerDevicePairOutput>(
+          {
+            method: "POST",
+            path: `/api/device/pair`,
+            body: { code: input["code"], name: input["name"], kind: input["kind"], platform: input["platform"] },
+            successStatus: 200,
+            declaredStatuses: [400, 401],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      remove: (input: ServerDeviceRemoveInput, requestOptions?: RequestOptions) =>
+        request<ServerDeviceRemoveOutput>(
+          {
+            method: "DELETE",
+            path: `/api/device/${encodeURIComponent(input.deviceID)}`,
+            successStatus: 204,
+            declaredStatuses: [404, 401, 400],
+            empty: true,
+          },
+          requestOptions,
+        ),
+    },
+    "server.handoff": {
+      send: (input: ServerHandoffSendInput, requestOptions?: RequestOptions) =>
+        request<ServerHandoffSendOutput>(
+          {
+            method: "POST",
+            path: `/api/handoff`,
+            body: { sessionID: input["sessionID"], deviceID: input["deviceID"], note: input["note"] },
+            successStatus: 200,
+            declaredStatuses: [404, 401, 400],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      pending: (requestOptions?: RequestOptions) =>
+        request<ServerHandoffPendingOutput>(
+          {
+            method: "GET",
+            path: `/api/handoff/pending`,
+            successStatus: 200,
+            declaredStatuses: [404, 401, 400],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      respond: (input: ServerHandoffRespondInput, requestOptions?: RequestOptions) =>
+        request<ServerHandoffRespondOutput>(
+          {
+            method: "POST",
+            path: `/api/handoff/${encodeURIComponent(input.handoffID)}`,
+            body: { status: input["status"] },
+            successStatus: 200,
+            declaredStatuses: [404, 401, 400],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      dismiss: (input: ServerHandoffDismissInput, requestOptions?: RequestOptions) =>
+        request<ServerHandoffDismissOutput>(
+          {
+            method: "DELETE",
+            path: `/api/handoff/${encodeURIComponent(input.handoffID)}`,
+            successStatus: 204,
+            declaredStatuses: [404, 401, 400],
             empty: true,
           },
           requestOptions,

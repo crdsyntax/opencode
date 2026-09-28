@@ -4,6 +4,7 @@ import { Effect, Layer, Option, Schema } from "effect"
 import { HttpClient, HttpClientRequest, HttpRouter } from "effect/unstable/http"
 import { HttpApi, HttpApiBuilder, HttpApiEndpoint, HttpApiError, HttpApiGroup } from "effect/unstable/httpapi"
 import { ServerAuth } from "../../src/server/auth"
+import { Device } from "@opencode-ai/core/device"
 import {
   Authorization,
   authorizationLayer,
@@ -52,7 +53,12 @@ const apiLayer = HttpRouter.serve(
 ).pipe(Layer.provideMerge(NodeHttpServer.layerTest))
 
 const v2ApiLayer = HttpRouter.serve(
-  HttpApiBuilder.layer(ServerApi).pipe(Layer.provide(serverHandlers), Layer.provide(serverAuthorizationLayer)),
+  HttpApiBuilder.layer(ServerApi).pipe(
+    Layer.provide(serverHandlers),
+    Layer.provide(serverAuthorizationLayer),
+    // These probes only exercise Basic auth, so no bearer token ever resolves to a paired device.
+    Layer.provide(Layer.mock(Device.Service, { authenticate: () => Effect.succeed(undefined) })),
+  ),
   { disableListenLog: true, disableLogger: true },
 ).pipe(Layer.provideMerge(NodeHttpServer.layerTest))
 

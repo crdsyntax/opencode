@@ -22,6 +22,15 @@ function eventID() {
   return EventV2.ID.create()
 }
 
+type LegacyEvent = { directory: string; payload: { id: string; type: string; properties: unknown } }
+
+// Legacy /event must emit the wrapped `{ directory, payload }` envelope, not the bare EventV2
+// record. Clients discriminate the two wire shapes with `"payload" in event`, so a bare record
+// makes them read every legacy event as V2 and lose its properties entirely.
+function legacyEvent(directory: string, event: { id: string; type: string; data: unknown }): LegacyEvent {
+  return { directory, payload: { id: event.id, type: event.type, properties: event.data } }
+}
+
 function eventResponse(events: EventV2.Interface) {
   return Effect.gen(function* () {
     const instance = yield* InstanceState.context
@@ -37,18 +46,21 @@ function eventResponse(events: EventV2.Interface) {
           event.location?.directory === instance.directory &&
           (event.location.workspaceID === undefined || event.location.workspaceID === workspaceID),
       ),
-      Stream.map((event) => ({ id: event.id, type: event.type, properties: event.data })),
+      Stream.map((event) => legacyEvent(instance.directory, event)),
     )
-    const disposed = Stream.callback<{ id: string; type: string; properties: unknown }>((queue) => {
+    const disposed = Stream.callback<LegacyEvent>((queue) => {
       const listener = (event: {
         directory?: string
         payload: { id?: string; type?: string; properties?: unknown }
       }) => {
         if (event.directory !== instance.directory || event.payload.type !== "server.instance.disposed") return
         Queue.offerUnsafe(queue, {
-          id: event.payload.id ?? eventID(),
-          type: "server.instance.disposed",
-          properties: event.payload.properties ?? {},
+          directory: instance.directory,
+          payload: {
+            id: event.payload.id ?? eventID(),
+            type: "server.instance.disposed",
+            properties: event.payload.properties ?? {},
+          },
         })
       }
       return Effect.acquireRelease(
@@ -58,16 +70,16 @@ function eventResponse(events: EventV2.Interface) {
     })
     const output = stream.pipe(
       Stream.merge(disposed, { haltStrategy: "left" }),
-      Stream.takeUntil((event) => event.type === "server.instance.disposed"),
+      Stream.takeUntil((event) => event.payload.type === "server.instance.disposed"),
     )
     const heartbeat = Stream.tick("10 seconds").pipe(
       Stream.drop(1),
-      Stream.map(() => ({ id: eventID(), type: "server.heartbeat", properties: {} })),
+      Stream.map(() => legacyEvent(instance.directory, { id: eventID(), type: "server.heartbeat", data: {} })),
     )
 
     yield* Effect.logInfo("event connected")
     return HttpServerResponse.stream(
-      Stream.make({ id: eventID(), type: "server.connected", properties: {} }).pipe(
+      Stream.make(legacyEvent(instance.directory, { id: eventID(), type: "server.connected", data: {} })).pipe(
         Stream.concat(output.pipe(Stream.merge(heartbeat, { haltStrategy: "left" }))),
         Stream.map(eventData),
         Stream.pipeThroughChannel(Sse.encode()),

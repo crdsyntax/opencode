@@ -101,6 +101,26 @@ export type ProjectCopyError = {
 export const isProjectCopyError = (value: unknown): value is ProjectCopyError =>
   typeof value === "object" && value !== null && "name" in value && value["name"] === "ProjectCopyError"
 
+export type DeviceError = { readonly _tag: "DeviceError"; readonly message: string }
+export const isDeviceError = (value: unknown): value is DeviceError =>
+  typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "DeviceError"
+
+export type DeviceNotFoundError = {
+  readonly _tag: "DeviceNotFoundError"
+  readonly deviceID: string
+  readonly message: string
+}
+export const isDeviceNotFoundError = (value: unknown): value is DeviceNotFoundError =>
+  typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "DeviceNotFoundError"
+
+export type HandoffNotFoundError = {
+  readonly _tag: "HandoffNotFoundError"
+  readonly handoffID: string
+  readonly message: string
+}
+export const isHandoffNotFoundError = (value: unknown): value is HandoffNotFoundError =>
+  typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "HandoffNotFoundError"
+
 export type HealthGetOutput = { readonly healthy: true }
 
 export type LocationGetInput = {
@@ -2805,3 +2825,107 @@ export type ProjectCopiesRefreshInput = {
 }
 
 export type ProjectCopiesRefreshOutput = void
+
+export type ServerDeviceListOutput = ReadonlyArray<{
+  readonly id: string
+  readonly name: string
+  readonly kind: "mobile" | "desktop"
+  readonly platform?: string
+  readonly time_created: number
+  readonly time_updated: number
+  readonly time_last_seen: number
+}>
+
+export type ServerDeviceOfferOutput = { readonly code: string; readonly expires_in: number }
+
+export type ServerDevicePairInput = {
+  readonly code: {
+    readonly code: string
+    readonly name: string
+    readonly kind: "mobile" | "desktop"
+    readonly platform?: string | undefined
+  }["code"]
+  readonly name: {
+    readonly code: string
+    readonly name: string
+    readonly kind: "mobile" | "desktop"
+    readonly platform?: string | undefined
+  }["name"]
+  readonly kind: {
+    readonly code: string
+    readonly name: string
+    readonly kind: "mobile" | "desktop"
+    readonly platform?: string | undefined
+  }["kind"]
+  readonly platform?: {
+    readonly code: string
+    readonly name: string
+    readonly kind: "mobile" | "desktop"
+    readonly platform?: string | undefined
+  }["platform"]
+}
+
+export type ServerDevicePairOutput = {
+  readonly device: {
+    readonly id: string
+    readonly name: string
+    readonly kind: "mobile" | "desktop"
+    readonly platform?: string
+    readonly time_created: number
+    readonly time_updated: number
+    readonly time_last_seen: number
+  }
+  readonly token: string
+}
+
+export type ServerDeviceRemoveInput = { readonly deviceID: { readonly deviceID: string }["deviceID"] }
+
+export type ServerDeviceRemoveOutput = void
+
+export type ServerHandoffSendInput = {
+  readonly sessionID: { readonly sessionID: string; readonly deviceID: string; readonly note?: string }["sessionID"]
+  readonly deviceID: { readonly sessionID: string; readonly deviceID: string; readonly note?: string }["deviceID"]
+  readonly note?: { readonly sessionID: string; readonly deviceID: string; readonly note?: string }["note"]
+}
+
+export type ServerHandoffSendOutput = {
+  readonly id: string
+  readonly sessionID: string
+  readonly deviceID: string
+  readonly deviceName: string
+  readonly status: "pending" | "accepted" | "declined"
+  readonly note?: string
+  readonly time_created: number
+  readonly time_updated: number
+}
+
+export type ServerHandoffPendingOutput = ReadonlyArray<{
+  readonly id: string
+  readonly sessionID: string
+  readonly deviceID: string
+  readonly deviceName: string
+  readonly status: "pending" | "accepted" | "declined"
+  readonly note?: string
+  readonly time_created: number
+  readonly time_updated: number
+}>
+
+export type ServerHandoffRespondInput = {
+  readonly handoffID: { readonly handoffID: string }["handoffID"]
+  readonly status: { readonly status: "accepted" | "declined" }["status"]
+}
+
+export type ServerHandoffRespondOutput = {
+  readonly id: string
+  readonly sessionID: string
+  readonly deviceID: string
+  readonly deviceName: string
+  readonly status: "pending" | "accepted" | "declined"
+  readonly note?: string
+  readonly time_created: number
+  readonly time_updated: number
+}
+
+export type ServerHandoffDismissInput = { readonly handoffID: { readonly handoffID: string }["handoffID"] }
+
+export type ServerHandoffDismissOutput = void

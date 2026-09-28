@@ -1,0 +1,6 @@
+﻿[install]
+# bun's default isolated layout nests every package under node_modules/.bun/<pkg>@<version>/,
+# which roughly doubles the depth of the source paths that CMake mirrors into the native build
+# directory. That pushes files such as RNGestureHandlerDetectorShadowNode.cpp past the 260
+# character Windows limit that ninja enforces. A hoisted tree keeps those paths short.
+linker = "hoisted"
