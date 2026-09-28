@@ -1,4 +1,5 @@
 import { Tag } from "@opencode-ai/ui/v2/badge-v2"
+import { ButtonV2 } from "@opencode-ai/ui/v2/button-v2"
 import { Icon as IconV2 } from "@opencode-ai/ui/v2/icon"
 import { IconButtonV2 } from "@opencode-ai/ui/v2/icon-button-v2"
 import { TextInputV2 } from "@opencode-ai/ui/v2/text-input-v2"
@@ -46,6 +47,12 @@ export const SettingsServersV2: Component = () => {
     dialog.push(() => <DialogServerV2 mode="edit" server={server} />)
   }
 
+  const openPairDevice = () => {
+    void import("@/components/dialog-pair-device").then((x) => {
+      dialog.push(() => <x.DialogPairDevice />)
+    })
+  }
+
   return (
     <>
       <div
@@ -54,7 +61,12 @@ export const SettingsServersV2: Component = () => {
       >
         <div class="settings-v2-tab-header-row">
           <h2 class="settings-v2-tab-title">{language.t("status.popover.tab.servers")}</h2>
-          <AddServerMenu onAddServer={openAdd} />
+          <div class="flex items-center gap-2">
+            <ButtonV2 variant="ghost-muted" icon="outline-share" onClick={openPairDevice}>
+              {language.t("device.pair.title")}
+            </ButtonV2>
+            <AddServerMenu onAddServer={openAdd} />
+          </div>
         </div>
         <Show when={showSearch()}>
           <div class="settings-v2-tab-search">
